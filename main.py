@@ -1,6 +1,7 @@
 import wx.adv
 import wx
 from plyer import notification
+import sys
 
 import warzonerep
 import proccheck
@@ -9,21 +10,20 @@ from bindata import resource_path
 from updater import download_release, have2update, restart
 
 
-TRAY_TOOLTIP = 'WarZone fix'
+TRAY_TOOLTIP = 'WarZone FIX'
 TRAY_ICON = 'icon.ico'
 PROCESS_NAME = 'ModernWarfare.exe'
 VERSION = '0.1'
 REPO = 'cproff/wzfix'
 
 
-def notify(text, timeout=2, force=False):
+def notify(text, timeout=5, force=False):
     if not config.SETTINGS['silence'] or force:
         notification.notify(
             title='WarZone Fix',
             message=text,
             app_icon=resource_path(TRAY_ICON),
-            timeout=timeout,
-        )
+            timeout=timeout)
 
 def create_menu_item(menu, label, func):
     item = wx.MenuItem(menu, -1, label)
@@ -43,16 +43,21 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
 
         self.onGo = False
         self.warzoneState = None
-        if self.dirname != '':
-            self.change_dirname(self.dirname)
+        if warzonerep.WarzoneReanamer.check_dir(self.dirname):
+            wx.CallLater(1000, self.start_switch, 0)
+        else:
+            self.dirname = ''
+            config.set_param('wzfolder', '')
+            config.save()
 
     def CreatePopupMenu(self):
         menu = wx.Menu()
-        create_menu_item(menu, 'Repair', self.on_repair)
-        create_menu_item(menu, 'Config', self.on_config)
+        create_menu_item(menu, 'Config folder', self.on_config)
         menu.AppendSeparator()
         create_menu_item(menu, f'Status: {"ON" if self.onGo else "OFF"}', self.start_switch)
         create_menu_item(menu, f'Silence: {"ON" if config.SETTINGS["silence"] else "OFF"}', self.silence_switch)
+        menu.AppendSeparator()
+        create_menu_item(menu, 'Repair WarZone', self.on_repair)
         menu.AppendSeparator()
         create_menu_item(menu, 'Exit', self.on_exit)
         return menu
@@ -60,11 +65,13 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
     def start_switch(self, e):
         if self.dirname != '':
             self.onGo = not self.onGo
+            if self.onGo:
+                wx.CallLater(1000, self.on_timer)
         else:
             wx.MessageBox('You have to setup WarZone installation folder firstly.', 'Warning!', wx.OK | wx.ICON_WARNING)
 
     def silence_switch(self, e):
-        config.set_param('silence', not config.SETTINGS['silence'])
+        config.set_param('silence', not config.SETTINGS["silence"])
 
     def set_icon(self, path):
         icon = wx.Icon(resource_path(path))
@@ -113,7 +120,6 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
 
     def on_exit(self, event):
         wx.CallAfter(self.Destroy)
-        # self.frame.Close()
 
 class App(wx.App):
     def update_dialog(self):
@@ -129,11 +135,11 @@ class App(wx.App):
             self.isLoaded = False
             self.dialog = wx.ProgressDialog("WarZone Fix updater", "Updating...")
             self.update_dialog()
-            updated = download_release(REPO, VERSION)
+            updated, cmdline = download_release(REPO, VERSION)
             self.isLoaded = True
             if updated:
-                restart()
-                exit()
+                os.system(cmdline)
+                sys.exit(0)
         config.load()
         TaskBarIcon(None)
         return True
