@@ -2,7 +2,7 @@ import requests
 import os
 import sys
 updated_path = os.path.join(os.path.abspath("."), 'updated.exe')
-replaceCMD = 'timeout 2 > NUL & del {0} & move {1} {0} & {0}'
+replaceCMD = 'timeout 2 > NUL && del {0} && move {1} {0} && {0}'
 
 
 def get_release(repo, r_tag):
@@ -19,10 +19,10 @@ def last_release_tag(repo):
     return data['tag_name']
 
 
-def have2update(r_tag):
+def have2update(repo, r_tag):
     exename = sys.argv[0]
     try:
-        newVer = r_tag != last_release_tag(r_tag)
+        newVer = r_tag != last_release_tag(repo)
     except Exception:
         newVer = False
     return not exename.endswith('py') and newVer
@@ -43,7 +43,3 @@ def download_release(repo, r_tag):
     except Exception as e:
         print(e)
         return False, None
-
-
-def restart():
-    os.execl(sys.executable, sys.executable, *sys.argv)

@@ -1,23 +1,22 @@
 import wx.adv
 import wx
 from plyer import notification
-import sys
-
 import warzonerep
 import proccheck
 import config
 from bindata import resource_path
-from updater import download_release, have2update, restart
+from updater import download_release, have2update
+import os
 
 
 TRAY_TOOLTIP = 'WarZone FIX'
 TRAY_ICON = 'icon.ico'
 PROCESS_NAME = 'ModernWarfare.exe'
-VERSION = '0.1'
+VERSION = 'v0.2'
 REPO = 'cproff/wzfix'
 
 
-def notify(text, timeout=5, force=False):
+def notify(text, timeout=3, force=False):
     if not config.SETTINGS['silence'] or force:
         notification.notify(
             title='WarZone Fix',
@@ -25,11 +24,13 @@ def notify(text, timeout=5, force=False):
             app_icon=resource_path(TRAY_ICON),
             timeout=timeout)
 
+
 def create_menu_item(menu, label, func):
     item = wx.MenuItem(menu, -1, label)
     menu.Bind(wx.EVT_MENU, func, id=item.GetId())
     menu.Append(item)
     return item
+
 
 class TaskBarIcon(wx.adv.TaskBarIcon):
     def __init__(self, frame):
@@ -92,7 +93,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
             self.onGo = True
             self.on_timer()
 
-    def on_config(self,e):
+    def on_config(self, e):
         dlg = wx.DirDialog(self.frame, "Choose WarZone installation folder", self.dirname, wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
         if dlg.ShowModal() == wx.ID_OK:
             if warzonerep.WarzoneReanamer.check_dir(dlg.GetPath()):
@@ -121,30 +122,21 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
     def on_exit(self, event):
         wx.CallAfter(self.Destroy)
 
+
 class App(wx.App):
-    def update_dialog(self):
-        v = (self.dialog.GetValue()+10)%100
-        self.dialog.Update(v)
-        if not self.isLoaded:
-            wx.CallLater(500, self.update_dialog)
-        else:
-            self.dialog.Update(100)
-            self.dialog.Destroy()
     def OnInit(self):
-        if have2update(VERSION):
-            self.isLoaded = False
-            self.dialog = wx.ProgressDialog("WarZone Fix updater", "Updating...")
-            self.update_dialog()
-            updated, cmdline = download_release(REPO, VERSION)
-            self.isLoaded = True
-            if updated:
-                os.system(cmdline)
-                sys.exit(0)
         config.load()
         TaskBarIcon(None)
         return True
 
+
 def main():
+    if have2update(REPO, VERSION):
+        print('updating')
+        updated, cmdline = download_release(REPO, VERSION)
+        if updated:
+            os.popen(cmdline)
+            return
     app = App(False)
     app.MainLoop()
 

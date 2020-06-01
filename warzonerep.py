@@ -1,7 +1,7 @@
 import os.path
 
-FILE_NAME = '\ModernWarfare.exe'
-BACKUP_NAME = '\ModernWarfare.exe_backup'
+FILE_NAME = '/ModernWarfare.exe'
+BACKUP_NAME = '/ModernWarfare.exe_backup'
 
 
 class WarzoneReanamer():
@@ -14,7 +14,7 @@ class WarzoneReanamer():
             return True
         else:
             return False
-        
+
     def load_backup(self):
         if os.path.isfile(self.p+BACKUP_NAME):
             os.rename(self.p+BACKUP_NAME, self.p+FILE_NAME)
